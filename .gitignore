@@ -1,0 +1,46 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Production build outputs (Vite defaults)
+dist
+dist-ssr
+*.local
+
+# Environment variables (Crucial to prevent credential leaks)
+.env
+.env.development.local
+.env.test.local
+.env.production.local
+.env.local
+
+# Vite / Frontend cache directories
+.vite
+.nuxt
+.next
+.docusaurus
+.turbo
+
+# TypeScript build info cache
+*.tsbuildinfo
