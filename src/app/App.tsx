@@ -1,12 +1,14 @@
 import { Outlet } from 'react-router-dom';
-import { AppLayout } from '../components/layout';
-import './App.css';
+import AppProviders from './providers';
+import AppLayout from '../components/layout/AppLayout/AppLayout';
 
 function App() {
   return (
-    <AppLayout>
-      <Outlet />
-    </AppLayout>
+    <AppProviders>
+      <AppLayout>
+        <Outlet />
+      </AppLayout>
+    </AppProviders>
   );
 }
 
