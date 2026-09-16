@@ -1,11 +1,12 @@
+import { Outlet } from 'react-router-dom';
+import { AppLayout } from '../components/layout';
 import './App.css';
 
 function App() {
   return (
-    <main>
-      <h1>We Are Navodayan</h1>
-      <p>Community Platform</p>
-    </main>
+    <AppLayout>
+      <Outlet />
+    </AppLayout>
   );
 }
 
