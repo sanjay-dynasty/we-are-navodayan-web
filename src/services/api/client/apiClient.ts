@@ -1,6 +1,7 @@
 import axios from 'axios';
 import env from '../../../config/env';
 import { normalizeApiError } from '../../../utils/error';
+import { tokenStorage } from '../auth/tokenStorage';
 
 const apiClient = axios.create({
   baseURL: env.apiBaseUrl,
@@ -10,11 +11,19 @@ const apiClient = axios.create({
   },
 });
 
+apiClient.interceptors.request.use((config) => {
+  const accessToken = tokenStorage.getAccessToken();
+
+  if (accessToken) {
+    config.headers.Authorization = `Bearer ${accessToken}`;
+  }
+
+  return config;
+});
+
 apiClient.interceptors.response.use(
   (response) => response,
-  (error) => {
-    return Promise.reject(normalizeApiError(error));
-  },
+  (error) => Promise.reject(normalizeApiError(error)),
 );
 
 export default apiClient;

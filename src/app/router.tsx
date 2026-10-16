@@ -8,6 +8,7 @@ import {
   HomePage,
   JNVPage,
   LoginPage,
+  RegisterPage,
   MentorshipPage,
   NotFoundPage,
   OpportunitiesPage,
@@ -52,6 +53,10 @@ const router = createBrowserRouter([
       {
         path: 'login',
         element: <LoginPage />,
+      },
+      {
+        path: 'register',
+        element: <RegisterPage />,
       },
       {
         path: 'profile',
