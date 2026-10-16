@@ -13,6 +13,7 @@ import {
   NotFoundPage,
   OpportunitiesPage,
   ProfilePage,
+  ProfileEditPage,
 } from '../pages';
 import App from './App';
 
@@ -63,6 +64,14 @@ const router = createBrowserRouter([
         element: (
           <ProtectedRoute>
             <ProfilePage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'profile/edit',
+        element: (
+          <ProtectedRoute>
+            <ProfileEditPage />
           </ProtectedRoute>
         ),
       },

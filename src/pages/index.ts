@@ -10,3 +10,5 @@ export { default as ProfilePage } from './Profile/ProfilePage';
 export { default as ErrorPage } from './Error/ErrorPage';
 export { default as NotFoundPage } from './NotFound/NotFoundPage';
 export { default as RegisterPage } from './Register/RegisterPage';
+
+export { default as ProfileEditPage } from './ProfileEdit/ProfileEditPage';
