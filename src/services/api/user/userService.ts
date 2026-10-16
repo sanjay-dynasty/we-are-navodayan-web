@@ -1,14 +1,28 @@
 import { apiClient } from '../client';
-import type { User } from '../../../types';
+import type { UserProfile, UserProfileUpdateRequest } from '../../../types';
 
 export const userService = {
-  getCurrentUser: async (): Promise<User> => {
-    const response = await apiClient.get<User>('/users/me');
-    return response.data;
+  getMyProfile: async (): Promise<UserProfile> => {
+    const response = await apiClient.get<{ success: boolean; data: UserProfile; message: string }>(
+      '/user-profiles/me',
+    );
+    return response.data.data;
   },
 
-  getUserById: async (userId: string): Promise<User> => {
-    const response = await apiClient.get<User>(`/users/${userId}`);
-    return response.data;
+  updateMyProfile: async (
+    request: UserProfileUpdateRequest,
+  ): Promise<UserProfile> => {
+    const response = await apiClient.put<{ success: boolean; data: UserProfile; message: string }>(
+      '/user-profiles/me',
+      request,
+    );
+    return response.data.data;
+  },
+
+  getUserById: async (userId: string): Promise<UserProfile> => {
+    const response = await apiClient.get<{ success: boolean; data: UserProfile; message: string }>(
+      `/user-profiles/${encodeURIComponent(userId)}`,
+    );
+    return response.data.data;
   },
 };

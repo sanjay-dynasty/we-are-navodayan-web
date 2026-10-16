@@ -12,4 +12,4 @@ export type {
 export type { ApiResponse } from './api/apiResponse';
 export type { ApiError } from './api/apiError';
 export type { Jnv } from './jnv/jnv';
-export type { User } from './user/user';
+export type { User, UserProfile, UserProfileUpdateRequest } from './user';
