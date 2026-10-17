@@ -1,8 +1,10 @@
 export interface Jnv {
   id: string;
-  name: string;
-  code: string;
+  schoolCode: string;
+  schoolName: string;
   district: string;
   state: string;
-  establishedYear?: number;
+  address: string | null;
+  pinCode: string | null;
+  active: boolean;
 }

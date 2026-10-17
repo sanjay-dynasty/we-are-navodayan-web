@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate } from 'react-router-dom';
 import { userService } from '../../services/api/user/userService';
+import { jnvService } from '../../services/api/jnv/jnvService';
 import type { UserProfile, UserProfileUpdateRequest } from '../../types';
 import './ProfileEditPage.css';
 
@@ -29,6 +30,32 @@ function ProfileEditForm({ profile }: { profile: UserProfile }) {
   const [form, setForm] = useState<ProfileForm>(() => createInitialForm(profile));
   const [formError, setFormError] = useState('');
 
+  const [jnvSearch, setJnvSearch] = useState('');
+
+  const {
+    data: jnvs = [],
+    isPending: isJnvPending,
+    isError: isJnvError,
+  } = useQuery({
+    queryKey: ['jnvs'],
+    queryFn: jnvService.getAll,
+    retry: false,
+  });
+
+  const filteredJnvs = jnvs.filter((jnv) => {
+    const search = jnvSearch.trim().toLowerCase();
+
+    return (
+      !search ||
+      jnv.schoolName.toLowerCase().includes(search) ||
+      jnv.schoolCode.toLowerCase().includes(search) ||
+      jnv.district.toLowerCase().includes(search) ||
+      jnv.state.toLowerCase().includes(search)
+    );
+  });
+
+  const selectedJnvAvailable = jnvs.some((jnv) => jnv.id === form.jnvId);
+
   const mutation = useMutation({
     mutationFn: userService.updateMyProfile,
     onSuccess: async (updatedProfile) => {
@@ -41,10 +68,7 @@ function ProfileEditForm({ profile }: { profile: UserProfile }) {
     },
   });
 
-  function updateField<K extends keyof ProfileForm>(
-    key: K,
-    value: ProfileForm[K],
-  ) {
+  function updateField<K extends keyof ProfileForm>(key: K, value: ProfileForm[K]) {
     setForm((current) => ({ ...current, [key]: value }));
     setFormError('');
   }
@@ -71,22 +95,10 @@ function ProfileEditForm({ profile }: { profile: UserProfile }) {
 
     if (
       form.batchYear !== null &&
-      (!Number.isInteger(form.batchYear) ||
-        form.batchYear < 1900 ||
-        form.batchYear > 2200)
+      (!Number.isInteger(form.batchYear) || form.batchYear < 1900 || form.batchYear > 2200)
     ) {
       setFormError('Passing year must be between 1900 and 2200.');
       return;
-    }
-
-    if (form.jnvId) {
-      const uuidPattern =
-        /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-
-      if (!uuidPattern.test(form.jnvId.trim())) {
-        setFormError('JNV ID must be a valid UUID.');
-        return;
-      }
     }
 
     const profileImageUrl = form.profileImageUrl?.trim() || null;
@@ -95,16 +107,11 @@ function ProfileEditForm({ profile }: { profile: UserProfile }) {
       try {
         const imageUrl = new URL(profileImageUrl);
 
-        if (
-          !['http:', 'https:'].includes(imageUrl.protocol) ||
-          !imageUrl.hostname
-        ) {
+        if (!['http:', 'https:'].includes(imageUrl.protocol) || !imageUrl.hostname) {
           throw new Error('Invalid URL');
         }
       } catch {
-        setFormError(
-          'Profile image URL must be a valid HTTP or HTTPS URL.',
-        );
+        setFormError('Profile image URL must be a valid HTTP or HTTPS URL.');
         return;
       }
     }
@@ -137,11 +144,7 @@ function ProfileEditForm({ profile }: { profile: UserProfile }) {
         </Link>
       </header>
 
-      <form
-        className="profile-edit-form"
-        onSubmit={handleSubmit}
-        noValidate
-      >
+      <form className="profile-edit-form" onSubmit={handleSubmit} noValidate>
         <section className="profile-edit-card">
           <h2>Basic information</h2>
 
@@ -154,9 +157,7 @@ function ProfileEditForm({ profile }: { profile: UserProfile }) {
               maxLength={150}
               required
               value={form.fullName}
-              onChange={(event) =>
-                updateField('fullName', event.target.value)
-              }
+              onChange={(event) => updateField('fullName', event.target.value)}
             />
           </div>
 
@@ -168,9 +169,7 @@ function ProfileEditForm({ profile }: { profile: UserProfile }) {
               rows={5}
               maxLength={1000}
               value={form.bio ?? ''}
-              onChange={(event) =>
-                updateField('bio', event.target.value)
-              }
+              onChange={(event) => updateField('bio', event.target.value)}
             />
             <small>{(form.bio ?? '').length}/1000 characters</small>
           </div>
@@ -179,43 +178,47 @@ function ProfileEditForm({ profile }: { profile: UserProfile }) {
         <section className="profile-edit-card">
           <h2>JNV &amp; batch</h2>
 
-          <div className="profile-edit-grid">
-            <div className="profile-edit-field">
-              <label htmlFor="jnvId">JNV ID</label>
-              <input
-                id="jnvId"
-                name="jnvId"
-                value={form.jnvId ?? ''}
-                placeholder="JNV UUID"
-                onChange={(event) =>
-                  updateField('jnvId', event.target.value || null)
-                }
-              />
-              <small>
-                Enter an existing JNV ID from the directory.
-              </small>
-            </div>
+          <div className="profile-edit-field">
+            <label htmlFor="jnvSearch">Jawahar Navodaya Vidyalaya</label>
 
-            <div className="profile-edit-field">
-              <label htmlFor="batchYear">Passing year</label>
-              <input
-                id="batchYear"
-                name="batchYear"
-                type="number"
-                min={1900}
-                max={2200}
-                step={1}
-                value={form.batchYear ?? ''}
-                onChange={(event) =>
-                  updateField(
-                    'batchYear',
-                    event.target.value === ''
-                      ? null
-                      : Number(event.target.value),
-                  )
-                }
-              />
-            </div>
+            <input
+              id="jnvSearch"
+              type="search"
+              value={jnvSearch}
+              placeholder="Search by school, code, district or state"
+              onChange={(event) => setJnvSearch(event.target.value)}
+              aria-describedby="jnv-help"
+            />
+
+            <select
+              id="jnvId"
+              name="jnvId"
+              value={form.jnvId ?? ''}
+              onChange={(event) => updateField('jnvId', event.target.value || null)}
+              disabled={isJnvPending || isJnvError}
+            >
+              <option value="">Select your JNV (optional)</option>
+
+              {form.jnvId && !selectedJnvAvailable && (
+                <option value={form.jnvId}>Previously selected JNV (unavailable)</option>
+              )}
+
+              {filteredJnvs
+                .filter((jnv) => jnv.active)
+                .map((jnv) => (
+                  <option key={jnv.id} value={jnv.id}>
+                    {jnv.schoolName} — {jnv.district}, {jnv.state} ({jnv.schoolCode})
+                  </option>
+                ))}
+            </select>
+
+            <small id="jnv-help">
+              {isJnvPending
+                ? 'Loading JNV directory...'
+                : isJnvError
+                  ? 'Unable to load the JNV directory. Try again later.'
+                  : `${filteredJnvs.filter((jnv) => jnv.active).length} matching active JNV(s).`}
+            </small>
           </div>
         </section>
 
@@ -229,9 +232,7 @@ function ProfileEditForm({ profile }: { profile: UserProfile }) {
                 id="profession"
                 maxLength={100}
                 value={form.profession ?? ''}
-                onChange={(event) =>
-                  updateField('profession', event.target.value)
-                }
+                onChange={(event) => updateField('profession', event.target.value)}
               />
             </div>
 
@@ -241,9 +242,7 @@ function ProfileEditForm({ profile }: { profile: UserProfile }) {
                 id="jobTitle"
                 maxLength={150}
                 value={form.jobTitle ?? ''}
-                onChange={(event) =>
-                  updateField('jobTitle', event.target.value)
-                }
+                onChange={(event) => updateField('jobTitle', event.target.value)}
               />
             </div>
 
@@ -253,9 +252,7 @@ function ProfileEditForm({ profile }: { profile: UserProfile }) {
                 id="organization"
                 maxLength={150}
                 value={form.organization ?? ''}
-                onChange={(event) =>
-                  updateField('organization', event.target.value)
-                }
+                onChange={(event) => updateField('organization', event.target.value)}
               />
             </div>
           </div>
@@ -272,9 +269,7 @@ function ProfileEditForm({ profile }: { profile: UserProfile }) {
                 maxLength={100}
                 autoComplete="address-level2"
                 value={form.currentCity ?? ''}
-                onChange={(event) =>
-                  updateField('currentCity', event.target.value)
-                }
+                onChange={(event) => updateField('currentCity', event.target.value)}
               />
             </div>
 
@@ -285,9 +280,7 @@ function ProfileEditForm({ profile }: { profile: UserProfile }) {
                 maxLength={100}
                 autoComplete="address-level1"
                 value={form.currentState ?? ''}
-                onChange={(event) =>
-                  updateField('currentState', event.target.value)
-                }
+                onChange={(event) => updateField('currentState', event.target.value)}
               />
             </div>
 
@@ -298,9 +291,7 @@ function ProfileEditForm({ profile }: { profile: UserProfile }) {
                 maxLength={100}
                 autoComplete="country-name"
                 value={form.country ?? ''}
-                onChange={(event) =>
-                  updateField('country', event.target.value)
-                }
+                onChange={(event) => updateField('country', event.target.value)}
               />
             </div>
           </div>
@@ -318,17 +309,9 @@ function ProfileEditForm({ profile }: { profile: UserProfile }) {
               maxLength={1000}
               placeholder="https://example.com/image.jpg"
               value={form.profileImageUrl ?? ''}
-              onChange={(event) =>
-                updateField(
-                  'profileImageUrl',
-                  event.target.value || null,
-                )
-              }
+              onChange={(event) => updateField('profileImageUrl', event.target.value || null)}
             />
-            <small>
-              This saves image metadata only; direct S3 upload is not
-              implemented yet.
-            </small>
+            <small>This saves image metadata only; direct S3 upload is not implemented yet.</small>
           </div>
         </section>
 
@@ -379,11 +362,7 @@ function ProfileEditPage() {
       <main className="profile-edit-page">
         <section className="profile-edit-state" role="alert">
           <h1>Unable to load your profile</h1>
-          <p>
-            {error instanceof Error
-              ? error.message
-              : 'Please try again.'}
-          </p>
+          <p>{error instanceof Error ? error.message : 'Please try again.'}</p>
           <button type="button" onClick={() => void refetch()}>
             Try again
           </button>
