@@ -29,6 +29,12 @@ function ProfileEditForm({ profile }: { profile: UserProfile }) {
   const queryClient = useQueryClient();
   const [form, setForm] = useState<ProfileForm>(() => createInitialForm(profile));
   const [formError, setFormError] = useState('');
+  const [skills, setSkills] = useState<string[]>(profile.skills ?? []);
+  const [interests, setInterests] = useState<string[]>(profile.interests ?? []);
+  const [skillInput, setSkillInput] = useState('');
+  const [interestInput, setInterestInput] = useState('');
+  const [skillsError, setSkillsError] = useState('');
+  const [interestsError, setInterestsError] = useState('');
 
   const [jnvSearch, setJnvSearch] = useState('');
 
@@ -73,6 +79,93 @@ function ProfileEditForm({ profile }: { profile: UserProfile }) {
     setFormError('');
   }
 
+  const skillsMutation = useMutation({
+    mutationFn: userService.replaceMySkills,
+    onSuccess: async (savedSkills) => {
+      setSkills(savedSkills);
+      setSkillsError('');
+      await queryClient.invalidateQueries({ queryKey: ['my-profile'] });
+    },
+    onError: (error: Error) => {
+      setSkillsError(error.message || 'Unable to save skills.');
+    },
+  });
+
+  const interestsMutation = useMutation({
+    mutationFn: userService.replaceMyInterests,
+    onSuccess: async (savedInterests) => {
+      setInterests(savedInterests);
+      setInterestsError('');
+      await queryClient.invalidateQueries({ queryKey: ['my-profile'] });
+    },
+    onError: (error: Error) => {
+      setInterestsError(error.message || 'Unable to save interests.');
+    },
+  });
+
+  function addEntry(
+    value: string,
+    entries: string[],
+    setEntries: React.Dispatch<React.SetStateAction<string[]>>,
+    setInput: React.Dispatch<React.SetStateAction<string>>,
+    setError: React.Dispatch<React.SetStateAction<string>>,
+    label: string,
+  ) {
+    const entry = value.trim();
+
+    if (!entry) {
+      setError(`Enter a ${label.toLowerCase()} first.`);
+      return;
+    }
+
+    if (entry.length > 100) {
+      setError(`${label} must not exceed 100 characters.`);
+      return;
+    }
+
+    if (entries.some((item) => item.toLowerCase() === entry.toLowerCase())) {
+      setError(`This ${label.toLowerCase()} has already been added.`);
+      return;
+    }
+
+    if (entries.length >= 30) {
+      setError(`You can add a maximum of 30 ${label.toLowerCase()} entries.`);
+      return;
+    }
+
+    setEntries([...entries, entry]);
+    setInput('');
+    setError('');
+  }
+
+  function removeEntry(
+    value: string,
+    entries: string[],
+    setEntries: React.Dispatch<React.SetStateAction<string[]>>,
+    setError: React.Dispatch<React.SetStateAction<string>>,
+  ) {
+    setEntries(entries.filter((entry) => entry !== value));
+    setError('');
+  }
+
+  function validateEntries(entries: string[], label: string): string | null {
+    if (entries.length > 30) {
+      return `You can add a maximum of 30 ${label.toLowerCase()} entries.`;
+    }
+
+    if (entries.some((entry) => !entry.trim() || entry.trim().length > 100)) {
+      return `Each ${label.toLowerCase()} must contain 1–100 characters.`;
+    }
+
+    if (
+      new Set(entries.map((entry) => entry.trim().toLowerCase())).size !==
+      entries.length
+    ) {
+      return `Duplicate ${label.toLowerCase()} entries are not allowed.`;
+    }
+
+    return null;
+  }
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
@@ -295,6 +388,140 @@ function ProfileEditForm({ profile }: { profile: UserProfile }) {
               />
             </div>
           </div>
+        </section>
+
+        <section className="profile-edit-card">
+          <h2>Skills</h2>
+          <p>Add skills that can help fellow Navodayans discover your expertise.</p>
+
+          <div className="profile-edit-field">
+            <label htmlFor="skillInput">Add a skill</label>
+            <div className="profile-edit-grid">
+              <input
+                id="skillInput"
+                value={skillInput}
+                maxLength={100}
+                placeholder="e.g. Java, React, Public Speaking"
+                onChange={(event) => {
+                  setSkillInput(event.target.value);
+                  setSkillsError('');
+                }}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') {
+                    event.preventDefault();
+                    addEntry(skillInput, skills, setSkills, setSkillInput, setSkillsError, 'Skill');
+                  }
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => addEntry(skillInput, skills, setSkills, setSkillInput, setSkillsError, 'Skill')}
+                disabled={skills.length >= 30}
+              >
+                Add skill
+              </button>
+            </div>
+            <small>{skills.length}/30 skills</small>
+          </div>
+
+          <div className="profile-edit-entry-list">
+            {skills.map((skill) => (
+              <div className="profile-edit-entry" key={skill}>
+                <span>{skill}</span>
+                <button
+                  type="button"
+                  aria-label={`Remove ${skill}`}
+                  onClick={() => removeEntry(skill, skills, setSkills, setSkillsError)}
+                >
+                  Remove
+                </button>
+              </div>
+            ))}
+          </div>
+
+          {skillsError && <p className="profile-edit-error" role="alert">{skillsError}</p>}
+
+          <button
+            type="button"
+            disabled={skillsMutation.isPending}
+            onClick={() => {
+              const error = validateEntries(skills, 'Skills');
+              if (error) {
+                setSkillsError(error);
+                return;
+              }
+              skillsMutation.mutate(skills.map((skill) => skill.trim()));
+            }}
+          >
+            {skillsMutation.isPending ? 'Saving skills...' : 'Save skills'}
+          </button>
+        </section>
+
+        <section className="profile-edit-card">
+          <h2>Interests</h2>
+          <p>Share the topics, activities and causes you are interested in.</p>
+
+          <div className="profile-edit-field">
+            <label htmlFor="interestInput">Add an interest</label>
+            <div className="profile-edit-grid">
+              <input
+                id="interestInput"
+                value={interestInput}
+                maxLength={100}
+                placeholder="e.g. Entrepreneurship, Mentoring"
+                onChange={(event) => {
+                  setInterestInput(event.target.value);
+                  setInterestsError('');
+                }}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') {
+                    event.preventDefault();
+                    addEntry(interestInput, interests, setInterests, setInterestInput, setInterestsError, 'Interest');
+                  }
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => addEntry(interestInput, interests, setInterests, setInterestInput, setInterestsError, 'Interest')}
+                disabled={interests.length >= 30}
+              >
+                Add interest
+              </button>
+            </div>
+            <small>{interests.length}/30 interests</small>
+          </div>
+
+          <div className="profile-edit-entry-list">
+            {interests.map((interest) => (
+              <div className="profile-edit-entry" key={interest}>
+                <span>{interest}</span>
+                <button
+                  type="button"
+                  aria-label={`Remove ${interest}`}
+                  onClick={() => removeEntry(interest, interests, setInterests, setInterestsError)}
+                >
+                  Remove
+                </button>
+              </div>
+            ))}
+          </div>
+
+          {interestsError && <p className="profile-edit-error" role="alert">{interestsError}</p>}
+
+          <button
+            type="button"
+            disabled={interestsMutation.isPending}
+            onClick={() => {
+              const error = validateEntries(interests, 'Interests');
+              if (error) {
+                setInterestsError(error);
+                return;
+              }
+              interestsMutation.mutate(interests.map((interest) => interest.trim()));
+            }}
+          >
+            {interestsMutation.isPending ? 'Saving interests...' : 'Save interests'}
+          </button>
         </section>
 
         <section className="profile-edit-card">
